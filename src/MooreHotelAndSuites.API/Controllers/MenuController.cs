@@ -38,7 +38,7 @@ namespace MooreHotelAndSuites.API.Controllers
             return Ok(item);
   }
  
-        // Create menu item (Admin/Manager only)
+       
 [Authorize]
 [HttpPost]
 public async Task<IActionResult> Create(CreateMenuItemDto dto)

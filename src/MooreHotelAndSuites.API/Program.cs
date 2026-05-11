@@ -34,6 +34,9 @@ using MooreHotelAndSuites.Application.Interfaces.Realtime;
 using CloudinaryDotNet;
 using DotNetEnv;
 using System.Text;
+using Serilog;
+using HealthChecks.NpgSql;
+using Prometheus;
 using MediatR;
 using MooreHotelAndSuites.Application.Features.Bookings.Commands.CreateBooking;
 
@@ -43,6 +46,12 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 var services = builder.Services;
 
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.Seq("http://seq:80")
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 services.AddMediatR(typeof(MooreHotelAndSuites.Application.Features.Bookings.Commands.CreateBooking.CreateBookingCommandHandler).Assembly);
 
@@ -107,6 +116,9 @@ services.AddAuthentication(options =>
          NameClaimType = ClaimTypes.Name 
     };
 });
+
+
+
 // ----------------- Database -----------------
 // services.AddDbContext<AppDbContext>(options =>
 //     options.UseNpgsql(
@@ -125,8 +137,8 @@ var dbConnection =
     $"Database={Environment.GetEnvironmentVariable("DB_NAME")};" +
     $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
     $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD")};" +
-    "Ssl Mode=Require;" +
-    "Trust Server Certificate=true;" +
+    $"Ssl Mode={Environment.GetEnvironmentVariable("DB_SSL_MODE") ?? "Require"};" +
+    $"Trust Server Certificate={Environment.GetEnvironmentVariable("DB_TRUST_CERT") ?? "true"};" +
     "Pooling=true;" +
     "Maximum Pool Size=20;" +
     "Timeout=15;" +
@@ -136,6 +148,10 @@ var dbConnection =
 services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(dbConnection));
 
+
+// DB + Health
+services.AddHealthChecks()
+    .AddNpgSql(dbConnection);
 
 // ----------------- SMTP -----------------
 var smtpHost = Environment.GetEnvironmentVariable("SMTP_HOST");
@@ -227,6 +243,13 @@ services.AddSwaggerGen(options =>
 
 
 
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration["Redis:Configuration"] ?? "redis:6379";
+});
+
+
+
 
 
 services.AddAuthorization(options =>
@@ -254,7 +277,7 @@ services.AddCors(options =>
 
 
 
-builder.Services.AddScoped<AppDbContext>();
+services.AddScoped<AppDbContext>();
 services.AddScoped<IHotelRepository, HotelRepository>();
 services.AddScoped<IRoomRepository, RoomRepository>();
 services.AddScoped<IBookingRepository, BookingRepository>();
@@ -339,7 +362,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-
+app.UseHttpMetrics();
+app.MapMetrics();
+app.MapHealthChecks("/health");
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.UseHttpsRedirection();
 app.UseRouting();

@@ -1,0 +1,62 @@
+cd ~
+
+rsync -av --exclude='.git' /mnt/c/Users/HP/MooreHotelAndSuitesBackEndApi/ ./MooreHotelAndSuitesBackEndApi
+
+cd ~/MooreHotelAndSuitesBackEndApi
+ls
+
+ wsl --shutdown
+ wsl --list --verbose
+ Restart-Service LxssManager
+ wsl
+ 
+dism.exe /online /enable-feature /featurename:Microsoft-Hyper-V /all /norestart
+
+API → Dockerized
+DB → PostgreSQL (container)
+Logs → Seq
+Metrics → Prometheus
+Dashboard → Grafana
+Cache → Redis
+CI/CD → GitHub Actions
+
+✔ Full microservice-ready environment
+✔ Centralized logging (Seq)
+✔ Metrics (Prometheus)
+✔ Visualization (Grafana)
+✔ Caching (Redis)
+✔ Containerized DB
+
+docker run -d \
+  -p 5341:80 \
+  -e ACCEPT_EULA=Y \
+  -e SEQ_FIRSTRUN_ADMINPASSWORD="MyStrongPassword123!" \
+  -v seq-data:/data \
+  --name seq \
+  datalust/seq
+
+docker compose up -d
+
+docker start seq
+
+
+docker rm -f seq; docker run -d -p 5341:80 -e ACCEPT_EULA=Y -e SEQ_FIRSTRUN_ADMINPASSWORD="MyStrongPassword123!" -v seq-data:/data --name seq datalust/seq
+
+
+$env:HTTP_PROXY=""
+$env:HTTPS_PROXY=""
+
+echo $env:HTTP_PROXY
+echo $env:HTTPS_PROXY
+
+ netstat -ano | findstr :5000
+
+ taskkill /PID 11356 /F
+
+ Those logs are not “just logs” — they are:
+
+Your debugging system
+Your performance profiler
+Your production monitoring foundation
+
+docker compose up --build

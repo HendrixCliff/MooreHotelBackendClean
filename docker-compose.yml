@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: src/MooreHotelAndSuites.API/Dockerfile
+    container_name: hotel-api
+    ports:
+      - "5000:80"
+    depends_on:
+      - postgres
+      - seq
+      - redis
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=HotelDb;Username=postgres;Password=postgres
+      - Serilog__WriteTo__0__Name=Seq
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
+      - Redis__Configuration=redis:6379
+
+  postgres:
+    image: postgres:15
+    container_name: hotel-db
+    environment:
+      POSTGRES_DB: HotelDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  seq:
+    image: datalust/seq
+    container_name: hotel-seq
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=MyStrongPassword123!
+    ports:
+      - "5341:80"
+    volumes:
+      - seqdata:/data
+
+  redis:
+    image: redis:7
+    container_name: hotel-redis
+    ports:
+      - "6379:6379"
+
+  prometheus:
+    image: prom/prometheus
+    container_name: hotel-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    container_name: hotel-grafana
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  seqdata:
