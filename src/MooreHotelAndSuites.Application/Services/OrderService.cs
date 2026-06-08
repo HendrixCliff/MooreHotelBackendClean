@@ -36,6 +36,16 @@ public async Task<(Guid id, decimal amount)> CreateOrderAsync(CreateOrderDto dto
     string customerName;
     string phoneNumber;
 
+    if (string.IsNullOrWhiteSpace(dto.CustomerName))
+    throw new Exception("Customer name is required");
+
+if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
+    throw new Exception("Phone number is required");
+
+var booking = await _bookingRepo.GetActiveByGuestAsync(
+    dto.CustomerName,
+    dto.PhoneNumber);
+
     // Handle event hall walk-in (no booking required)
     if (dto.Source == OrderSource.EventHall)
     {
@@ -65,7 +75,16 @@ public async Task<(Guid id, decimal amount)> CreateOrderAsync(CreateOrderDto dto
         else
         {
             // Multiple rooms - validate each room belongs to the guest
-            var guest = await _guestRepo.GetByFullNameAndPhoneAsync(dto.CustomerName, dto.PhoneNumber);
+           if (string.IsNullOrWhiteSpace(dto.CustomerName))
+            throw new Exception("Customer name is required");
+
+        if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
+            throw new Exception("Phone number is required");
+
+        var guest = await _guestRepo.GetByFullNameAndPhoneAsync(
+            dto.CustomerName,
+            dto.PhoneNumber);
+
             if (guest == null)
                 throw new Exception("Guest not found");
 
@@ -87,9 +106,22 @@ public async Task<(Guid id, decimal amount)> CreateOrderAsync(CreateOrderDto dto
             }
 
             // Create order for the first room (or main booking)
-            var firstBooking = await _bookingRepo.GetActiveByRoomNumberAsync(dto.RoomItems[0].RoomNumber);
-            order = ServiceOrder.CreateForHotelGuest(firstBooking, customerName, phoneNumber, dto.Source);
+           var firstBooking =
+    await _bookingRepo.GetActiveByRoomNumberAsync(
+        dto.RoomItems[0].RoomNumber!);
+
+        if (firstBooking == null)
+        {
+            throw new Exception(
+                $"No active booking found for room {dto.RoomItems[0].RoomNumber}");
         }
+
+        order = ServiceOrder.CreateForHotelGuest(
+            firstBooking,
+            customerName,
+            phoneNumber,
+            dto.Source);
+                }
     }
 
     // Add items for each room - Pass RoomNumber to OrderItem
@@ -101,7 +133,7 @@ public async Task<(Guid id, decimal amount)> CreateOrderAsync(CreateOrderDto dto
             if (menu == null)
                 throw new Exception($"Menu item not found");
 
-            // ✅ Pass the RoomNumber when creating the OrderItem
+            // Pass the RoomNumber when creating the OrderItem
             order.AddItem(menu, item.Quantity, roomItem.RoomNumber);
         }
     }

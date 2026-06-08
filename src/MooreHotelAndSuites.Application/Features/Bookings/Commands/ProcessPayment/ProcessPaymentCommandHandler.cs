@@ -54,10 +54,22 @@ public sealed class ProcessPaymentCommandHandler
         // booking.SetPaymentReference(response.Data.Reference);
         // await _repo.UpdateAsync(booking);
 
-        return new PaymentLinkDto
+       if (string.IsNullOrWhiteSpace(response.Data.AuthorizationUrl))
         {
-            AuthorizationUrl = response.Data.AuthorizationUrl,
-            Reference = response.Data.Reference
-        };
+            throw new InvalidOperationException(
+                "Paystack returned no authorization URL");
+        }
+
+        if (string.IsNullOrWhiteSpace(response.Data.Reference))
+        {
+            throw new InvalidOperationException(
+                "Paystack returned no reference");
+        }
+
+return new PaymentLinkDto
+{
+    AuthorizationUrl = response.Data.AuthorizationUrl,
+    Reference = response.Data.Reference
+};
     }
 }
