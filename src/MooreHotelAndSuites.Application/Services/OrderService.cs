@@ -36,15 +36,7 @@ public async Task<(Guid id, decimal amount)> CreateOrderAsync(CreateOrderDto dto
     string customerName;
     string phoneNumber;
 
-    if (string.IsNullOrWhiteSpace(dto.CustomerName))
-    throw new Exception("Customer name is required");
-
-if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
-    throw new Exception("Phone number is required");
-
-var booking = await _bookingRepo.GetActiveByGuestAsync(
-    dto.CustomerName,
-    dto.PhoneNumber);
+   
 
     // Handle event hall walk-in (no booking required)
     if (dto.Source == OrderSource.EventHall)
@@ -62,7 +54,15 @@ var booking = await _bookingRepo.GetActiveByGuestAsync(
         if (dto.RoomItems.Count == 1 && string.IsNullOrEmpty(dto.RoomItems[0].RoomNumber))
         {
             // Single room - find by guest name/phone (we know which room)
-            var booking = await _bookingRepo.GetActiveByGuestAsync(dto.CustomerName, dto.PhoneNumber);
+            if (string.IsNullOrWhiteSpace(dto.CustomerName))
+    throw new Exception("Customer name is required");
+
+if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
+    throw new Exception("Phone number is required");
+
+var booking = await _bookingRepo.GetActiveByGuestAsync(
+    dto.CustomerName,
+    dto.PhoneNumber);
             if (booking == null)
                 throw new Exception("No active booking found for this guest");
 
