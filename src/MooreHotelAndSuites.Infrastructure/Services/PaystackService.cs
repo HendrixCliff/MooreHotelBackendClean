@@ -13,43 +13,67 @@ namespace MooreHotelAndSuites.Infrastructure.Services
         public PaystackService(IOptions<PaystackSettings> settings)
         {
             _settings = settings.Value;
+
             _httpClient = new HttpClient();
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_settings.SecretKey}");
+
+            _httpClient.DefaultRequestHeaders.Add(
+                "Authorization",
+                $"Bearer {_settings.SecretKey}");
         }
 
         public async Task<PaystackInitializeResponse> InitializePaymentAsync(
-            string email, 
-            decimal amount, 
+            string email,
+            decimal amount,
             string bookingId)
         {
             var request = new
             {
-                email = email,
-                amount = (int)(amount * 100), // Paystack uses kobo/kwacha
+                email,
+                amount = (int)(amount * 100),
                 callback_url = $"{_settings.BaseUrl}/payment-complete",
                 metadata = new
                 {
                     booking_id = bookingId,
                     custom_fields = new[]
                     {
-                        new { display_name = "Booking ID", variable_name = "booking_id", value = bookingId }
+                        new
+                        {
+                            display_name = "Booking ID",
+                            variable_name = "booking_id",
+                            value = bookingId
+                        }
                     }
                 }
             };
 
             var response = await _httpClient.PostAsJsonAsync(
-                $"{_settings.BaseUrl}/transaction/initialize", 
+                $"{_settings.BaseUrl}/transaction/initialize",
                 request);
 
-            return await response.Content.ReadFromJsonAsync<PaystackInitializeResponse>();
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content
+                .ReadFromJsonAsync<PaystackInitializeResponse>();
+
+            return result
+                ?? throw new InvalidOperationException(
+                    "Paystack returned an empty initialization response.");
         }
 
-        public async Task<PaystackVerifyResponse> VerifyPaymentAsync(string reference)
+        public async Task<PaystackVerifyResponse> VerifyPaymentAsync(
+            string reference)
         {
             var response = await _httpClient.GetAsync(
                 $"{_settings.BaseUrl}/transaction/verify/{reference}");
 
-            return await response.Content.ReadFromJsonAsync<PaystackVerifyResponse>();
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content
+                .ReadFromJsonAsync<PaystackVerifyResponse>();
+
+            return result
+                ?? throw new InvalidOperationException(
+                    "Paystack returned an empty verification response.");
         }
     }
 }
