@@ -32,9 +32,8 @@ jobs:
           pwd
           ls -R
           docker build --progress=plain \
-            -t MooreHotelAndSuites:${{ github.sha }} \
+            -t moorehotelandsuites:${{ github.sha }} \
             -f src/MooreHotelAndSuites.API/Dockerfile .
-
       # OPTIONAL: login to registry
       # - name: Login to DockerHub
       #   run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
