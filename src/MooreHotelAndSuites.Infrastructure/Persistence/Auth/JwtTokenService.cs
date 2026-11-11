@@ -1,92 +1,78 @@
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
+
 using Microsoft.IdentityModel.Tokens;
+using MooreHotelAndSuites.Application.Interfaces.Identity;
+using MooreHotelAndSuites.Application.Interfaces.Services;
+using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using MooreHotelAndSuites.Infrastructure.Identity;
 
-namespace MooreHotelAndSuites.Infrastructure.Auth
+namespace MooreHotelAndSuites.Infrastructure.Auth;
+
+public sealed class JwtTokenService : IJwtTokenService
 {
-    public interface IJwtTokenService
+    private readonly IConfiguration _configuration;
+
+    public JwtTokenService(IConfiguration configuration)
     {
-        Task<(string AccessToken, string RefreshToken)> GenerateTokensAsync(ApplicationUser user);
-        Task<string> GenerateAccessTokenAsync(ApplicationUser user);
+        _configuration = configuration;
     }
 
-    public class JwtTokenService : IJwtTokenService
+    public async Task<string> GenerateAccessTokenAsync(
+        IApplicationUser user,
+        IReadOnlyCollection<string> roles,
+        CancellationToken cancellationToken = default)
     {
-        private readonly IConfiguration _config;
-        private readonly UserManager<ApplicationUser> _userManager;
+        var jwtKey = _configuration["Jwt:Key"]?.Trim();
+        var issuer = _configuration["Jwt:Issuer"];
+        var audience = _configuration["Jwt:Audience"];
 
-        public JwtTokenService(IConfiguration config, UserManager<ApplicationUser> userManager)
+        if (string.IsNullOrWhiteSpace(jwtKey))
+            throw new InvalidOperationException("JWT Key is missing.");
+
+        if (string.IsNullOrWhiteSpace(issuer) ||
+            string.IsNullOrWhiteSpace(audience))
         {
-            _config = config;
-            _userManager = userManager;
+            throw new InvalidOperationException(
+                "JWT issuer or audience is missing.");
         }
 
-        public async Task<(string AccessToken, string RefreshToken)> GenerateTokensAsync(ApplicationUser user)
+        var claims = new List<Claim>
         {
-            var accessToken = await GenerateAccessTokenAsync(user);
-            var refreshToken = GenerateRefreshToken();
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(ClaimTypes.Email, user.Email ?? string.Empty),
+            new(ClaimTypes.Name, user.UserName ?? string.Empty)
+        };
 
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-
-            await _userManager.UpdateAsync(user);
-
-            return (accessToken, refreshToken);
+        foreach (var role in roles.Distinct())
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+            claims.Add(new Claim("role", role));
         }
 
-  public async Task<string> GenerateAccessTokenAsync(ApplicationUser user)
-{
-    var jwtKey = _config["Jwt:Key"]?.Trim();
-    var issuer = _config["Jwt:Issuer"];
-    var audience = _config["Jwt:Audience"];
+        var key = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtKey));
 
-    if (string.IsNullOrWhiteSpace(jwtKey))
-        throw new InvalidOperationException("JWT Key is missing.");
+        var credentials = new SigningCredentials(
+            key,
+            SecurityAlgorithms.HmacSha256);
 
-    // Use UTF8 encoding
-    var key = Encoding.UTF8.GetBytes(jwtKey);
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(60),
+            signingCredentials: credentials);
 
-    var roles = await _userManager.GetRolesAsync(user);
-
-    var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.NameIdentifier, user.Id),
-        new Claim(ClaimTypes.Email, user.Email ?? ""),
-        new Claim(ClaimTypes.Name, user.UserName ?? ""),
-    };
-
-
-    foreach (var role in roles.Distinct())
-    {
-          claims.Add(new Claim("role", role));           // Custom claim
-    claims.Add(new Claim(ClaimTypes.Role, role));
+        return await Task.FromResult(
+            new JwtSecurityTokenHandler().WriteToken(token));
     }
 
-    var tokenDescriptor = new SecurityTokenDescriptor
+    public string GenerateRefreshToken()
     {
-        Subject = new ClaimsIdentity(claims),
-        Expires = DateTime.UtcNow.AddMinutes(60),
-        Issuer = issuer,
-        Audience = audience,
-        SigningCredentials = new SigningCredentials(
-            new SymmetricSecurityKey(key),
-            SecurityAlgorithms.HmacSha256)
-    };
+        var randomNumber = RandomNumberGenerator.GetBytes(64);
 
-    var handler = new JwtSecurityTokenHandler();
-    return handler.WriteToken(handler.CreateToken(tokenDescriptor));
-}
-        private string GenerateRefreshToken()
-        {
-            var randomNumber = new byte[64];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomNumber);
-            return Convert.ToBase64String(randomNumber);
-        }
+        return Convert.ToBase64String(randomNumber);
     }
 }

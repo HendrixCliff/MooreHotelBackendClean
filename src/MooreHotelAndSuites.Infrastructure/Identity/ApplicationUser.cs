@@ -7,6 +7,7 @@ namespace MooreHotelAndSuites.Infrastructure.Identity
     {
         public string? FullName { get; set; }
         public bool MustChangePassword { get; set; } = true;
+        public bool IsActive { get; set; } = true;
         public DateTime CreatedOn { get; set; }
         public string? RefreshToken { get; set; }
         public DateTime RefreshTokenExpiryTime { get; set; }

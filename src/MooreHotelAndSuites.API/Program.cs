@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MooreHotelAndSuites.API.Hubs;
 using System.Security.Claims;
+using Npgsql;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -40,9 +41,40 @@ using Prometheus;
 using MediatR;
 using MooreHotelAndSuites.Application.Features.Bookings.Commands.CreateBooking;
 
-Env.Load();
+
+
+var currentDirectory = new DirectoryInfo(Directory.GetCurrentDirectory());
+string? envPath = null;
+
+while (currentDirectory is not null)
+{
+    var candidates = new[]
+    {
+        Path.Combine(currentDirectory.FullName, ".env"),
+        Path.Combine(
+            currentDirectory.FullName,
+            "MooreHotelAndSuites.API",
+            ".env")
+    };
+
+    envPath = candidates.FirstOrDefault(File.Exists);
+
+    if (envPath is not null)
+        break;
+
+    currentDirectory = currentDirectory.Parent;
+}
+
+if (envPath is not null)
+{
+    Env.Load(envPath);
+}
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+
 var configuration = builder.Configuration;
 var services = builder.Services;
 
@@ -131,22 +163,31 @@ services.AddAuthentication(options =>
 //         "Trust Server Certificate=true;",
 //         b => b.MigrationsAssembly("MooreHotelAndSuites.Infrastructure")
 //    ));
-var dbConnection =
-    $"Host={Environment.GetEnvironmentVariable("DB_HOST")};" +
-    $"Port={Environment.GetEnvironmentVariable("DB_PORT")};" +
-    $"Database={Environment.GetEnvironmentVariable("DB_NAME")};" +
-    $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
-    $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD")};" +
-    $"Ssl Mode={Environment.GetEnvironmentVariable("DB_SSL_MODE") ?? "Require"};" +
-    $"Trust Server Certificate={Environment.GetEnvironmentVariable("DB_TRUST_CERT") ?? "true"};" +
-    "Pooling=true;" +
-    "Maximum Pool Size=20;" +
-    "Timeout=15;" +
-    "Command Timeout=30;" +
-    "Keepalive=30;";
+
+
+var dbConnection = Environment.GetEnvironmentVariable("DATABASE_URL");
+
+if (string.IsNullOrWhiteSpace(dbConnection))
+{
+    throw new InvalidOperationException(
+        "DATABASE_URL is missing. Check the API project's .env file.");
+}
+
+var connectionBuilder =
+    new NpgsqlConnectionStringBuilder(dbConnection);
+
+if (string.IsNullOrWhiteSpace(connectionBuilder.Host))
+{
+    throw new InvalidOperationException(
+        "DATABASE_URL does not contain a valid PostgreSQL host.");
+}
 
 services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(dbConnection));
+    options.UseNpgsql(
+        connectionBuilder.ConnectionString,
+        npgsql => npgsql.MigrationsAssembly(
+            "MooreHotelAndSuites.Infrastructure")));
+
 
 
 // DB + Health
@@ -258,7 +299,7 @@ services.AddAuthorization(options =>
         policy.RequireRole("Admin"));
 });
 
-var allowedOrigins = new[] { "https://localhost:3000", "http://localhost:4200" }; // replace with your frontend URLs
+var allowedOrigins = new[] { "http://localhost:5002"}; // replace with your frontend URLs
 
 services.AddCors(options =>
 {
@@ -292,7 +333,9 @@ services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 services.AddScoped<IAmenityRepository, AmenityRepository>();
 services.AddScoped<IOrderRepository, OrderRepository>();
 services.AddScoped<IMenuRepository, MenuRepository>();
+services.AddScoped<IIdentityAuthRepository, IdentityAuthRepository>();
 
+services.AddScoped<IAuthService, AuthService>();
 services.AddScoped<IEmailService, EmailService>();
 services.AddScoped<ICurrentUserService, CurrentUserService>();
 services.AddScoped<IAdminManagementService, AdminManagementService>();

@@ -1,18 +1,27 @@
+using MooreHotelAndSuites.Application.DTOs.Admin;
 using MooreHotelAndSuites.Application.Interfaces.Identity;
 
-namespace MooreHotelAndSuites.Application.Interfaces.Identity
+namespace MooreHotelAndSuites.Application.Interfaces.Identity;
+
+public interface IUserManagementService
 {
-    public interface IUserManagementService
-    {
-        Task<int> CountUsersAsync();
-        Task<IReadOnlyList<IApplicationUser>> GetUsersInRoleAsync(string role);
-        Task<IApplicationUser> CreateUserAsync(
-            string email,
-            string fullName,
-            string password,
-            string role);
-        Task ActivateAsync(string userId);
-        Task DeactivateAsync(string userId);
-        Task DeleteAsync(string userId);
-    }
+    Task<int> CountUsersAsync();
+
+    Task<IReadOnlyList<IApplicationUser>> GetUsersInRoleAsync(
+        string role);
+
+    Task<IReadOnlyList<EmployeeDto>> GetEmployeesAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<IApplicationUser> CreateUserAsync(
+        string email,
+        string fullName,
+        string password,
+        string role);
+
+    Task ActivateAsync(string userId);
+
+    Task DeactivateAsync(string userId);
+
+    Task DeleteAsync(string userId);
 }

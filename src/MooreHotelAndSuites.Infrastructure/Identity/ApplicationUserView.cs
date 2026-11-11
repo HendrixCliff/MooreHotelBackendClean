@@ -12,6 +12,7 @@ namespace MooreHotelAndSuites.Infrastructure.Identity
             Email = user.Email ?? throw new ArgumentNullException(nameof(user.Email));
             FullName = user.FullName;
             EmailConfirmed = user.EmailConfirmed;
+            IsActive = user.IsActive;
         }
 
         public string Id { get; }
@@ -19,5 +20,6 @@ namespace MooreHotelAndSuites.Infrastructure.Identity
         public string Email { get; }
         public string? FullName { get; }
         public bool EmailConfirmed { get; }
+        public bool IsActive { get; set; } 
     }
 }

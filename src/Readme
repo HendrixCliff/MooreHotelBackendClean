@@ -51,7 +51,7 @@ echo $env:HTTPS_PROXY
 
  netstat -ano | findstr :5000
 
- taskkill /PID 11356 /F
+taskkill /F /IM dotnet.exe
 
  Those logs are not “just logs” — they are:
 

@@ -7,5 +7,7 @@ namespace MooreHotelAndSuites.Application.Interfaces.Identity
         string? Email { get; }
         string? FullName { get; }
         bool EmailConfirmed { get; }
+         bool IsActive { get; }
+        
     }
 }

@@ -28,7 +28,7 @@ public class AdminAnalyticsController : ControllerBase
         await _analytics.CountActionsAsync("ADMIN"),
 
     TotalLogins =
-        await _analytics.CountActionsAsync("POST /api/auth/login"),
+        await _analytics.CountActionsAsync("POST /api/users/login"),
 
     ActionsLast7Days =
         await _analytics.ActionsPerDayAsync(from)

@@ -364,7 +364,7 @@ namespace MooreHotelAndSuites.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("BookingId")
                         .HasColumnType("uuid");
@@ -584,10 +584,15 @@ namespace MooreHotelAndSuites.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("numeric");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GuestId");
 
                     b.ToTable("ServiceOrders");
                 });
@@ -604,9 +609,6 @@ namespace MooreHotelAndSuites.Infrastructure.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
-                    b.Property<string>("CreatedByAdminId")
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone");
 
@@ -619,6 +621,9 @@ namespace MooreHotelAndSuites.Infrastructure.Migrations
 
                     b.Property<string>("FullName")
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -736,7 +741,7 @@ namespace MooreHotelAndSuites.Infrastructure.Migrations
                     b.HasOne("MooreHotelAndSuites.Domain.Entities.Room", "Room")
                         .WithMany("Bookings")
                         .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Guest");
@@ -746,11 +751,13 @@ namespace MooreHotelAndSuites.Infrastructure.Migrations
 
             modelBuilder.Entity("MooreHotelAndSuites.Domain.Entities.Payment", b =>
                 {
-                    b.HasOne("MooreHotelAndSuites.Domain.Entities.Booking", null)
+                    b.HasOne("MooreHotelAndSuites.Domain.Entities.Booking", "Booking")
                         .WithMany("Payments")
                         .HasForeignKey("BookingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("MooreHotelAndSuites.Domain.Entities.Reservation", b =>
@@ -814,6 +821,10 @@ namespace MooreHotelAndSuites.Infrastructure.Migrations
 
             modelBuilder.Entity("MooreHotelAndSuites.Domain.Entities.ServiceOrder", b =>
                 {
+                    b.HasOne("MooreHotelAndSuites.Domain.Entities.Guest", "Guest")
+                        .WithMany()
+                        .HasForeignKey("GuestId");
+
                     b.OwnsMany("MooreHotelAndSuites.Domain.Entities.OrderItem", "Items", b1 =>
                         {
                             b1.Property<Guid>("Id")
@@ -833,6 +844,9 @@ namespace MooreHotelAndSuites.Infrastructure.Migrations
                             b1.Property<int>("Quantity")
                                 .HasColumnType("integer");
 
+                            b1.Property<string>("RoomNumber")
+                                .HasColumnType("text");
+
                             b1.Property<decimal>("UnitPrice")
                                 .HasColumnType("numeric");
 
@@ -845,6 +859,8 @@ namespace MooreHotelAndSuites.Infrastructure.Migrations
                             b1.WithOwner()
                                 .HasForeignKey("OrderId");
                         });
+
+                    b.Navigation("Guest");
 
                     b.Navigation("Items");
                 });
