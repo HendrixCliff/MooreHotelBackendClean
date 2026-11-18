@@ -381,7 +381,8 @@ services.AddScoped<IIdentityLookupService, IdentityEmailService>();
 
 var app = builder.Build();
 
-
+if (builder.Configuration.GetValue<bool>("Database:ApplyMigrations"))
+{
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -392,7 +393,7 @@ using (var scope = app.Services.CreateScope())
 
     await IdentitySeeder.SeedAsync(scope.ServiceProvider);
 }
-
+}
 
 
 if (app.Environment.IsDevelopment())

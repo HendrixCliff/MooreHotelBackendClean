@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MooreHotelAndSuites.Infrastructure.Migrations
+namespace MooreHotelAndSuites.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20261111163620_AddEmployeeActiveStatus")]
